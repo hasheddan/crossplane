@@ -64,3 +64,35 @@ type ProviderList struct {
 func (p *Provider) IsValid() bool {
 	return p.Status.IsReady()
 }
+
+// ResourceGroupSpec defines the desired state of ResourceGroup
+type ResourceGroupSpec struct {
+	// Important: Run "make generate" to regenerate code after modifying this file
+
+	// +kubebuilder:validation:MinLength=1
+	Location string `json:"location"`
+
+	// +kubebuilder:validation:MaxLength=90
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	Subscription string `json:"subscription,omitempty"`
+
+	Tags map[string]string `json:"tags,omitempty"`
+}
+
+// ResourceGroupStatus is the status for this ResourceGroup
+type ResourceGroupStatus struct {
+	corev1alpha1.ConditionedStatus
+}
+
+// ResourceGroup is the Schema for the ResourceGroup API
+// +k8s:openapi-gen=true
+// +groupName=azure
+type ResourceGroup struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   ResourceGroupSpec   `json:"spec,omitempty"`
+	Status ResourceGroupStatus `json:"status,omitempty"`
+}
