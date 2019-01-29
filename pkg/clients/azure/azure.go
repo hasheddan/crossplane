@@ -118,3 +118,15 @@ func IsNotFound(err error) bool {
 
 	return statusCode == http.StatusNotFound
 }
+
+// CreateResourceGroup creates a new resource group or updates an existing one
+// https://godoc.org/github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources#GroupsClient
+func CreateResourceGroup(spec v1alpha1.ResourceGroupSpec, client *Client) error {
+	// TODO
+	// Get the Groups Client
+	groupsClient := resources.NewGroupsClient(client.SubscriptionID)
+
+	// Create or Update Resource Group with given name
+	_, err := groupsClient.CreateOrUpdate(context.TODO(), spec.Name, spec)
+	return err
+}

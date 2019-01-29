@@ -66,19 +66,31 @@ func (p *Provider) IsValid() bool {
 }
 
 // ResourceGroupSpec defines the desired state of ResourceGroup
+// https://godoc.org/github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources#Group
 type ResourceGroupSpec struct {
 	// Important: Run "make generate" to regenerate code after modifying this file
 
-	// +kubebuilder:validation:MinLength=1
-	Location string `json:"location"`
+	// ID - The ID of the resource group.
+	ID string `json:"id,omitempty"`
 
+	// Name - The name of the resource group.
 	// +kubebuilder:validation:MaxLength=90
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 
-	Subscription string `json:"subscription,omitempty"`
+	// Type - The type of the resource group.
+	Type string `json:"type,omitempty"`
 
-	Tags map[string]string `json:"tags,omitempty"`
+	// Properties GroupProperties `json:"properties,omitempty"`
+	// Location - The location of the resource group. It cannot be changed after the resource group has been created. It must be one of the supported Azure locations.
+	// +kubebuilder:validation:MinLength=1
+	Location string `json:"location,omitempty"`
+
+	// ManagedBy - The ID of the resource that manages this resource group.
+	ManagedBy string `json:"managedBy,omitempty"`
+
+	// Tags - The tags attached to the resource group.
+	Tags map[string]string `json:"tags"`
 }
 
 // ResourceGroupStatus is the status for this ResourceGroup
