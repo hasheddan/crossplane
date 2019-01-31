@@ -41,9 +41,10 @@ const (
 )
 
 var (
-	ctx           = context.Background()
-	result        = reconcile.Result{}
-	resultRequeue = reconcile.Result{Requeue: true}
+	_             reconcile.Reconciler = &Reconciler{}
+	ctx                                = context.Background()
+	result                             = reconcile.Result{}
+	resultRequeue                      = reconcile.Result{Requeue: true}
 )
 
 // Add creates a new Resource Group Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
@@ -61,7 +62,7 @@ type Reconciler struct {
 
 	// validate func(*google.Credentials, []string) error
 	// connect func(*azurev1alpha1.ResourceGroup) (resourcegroup.Client, error)
-	create func(*azurev1alpha1.ResourceGroup, azure.Client)
+	create func(*azurev1alpha1.ResourceGroup, azure.ResourceGroupClient)
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -95,25 +96,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 }
 
 // fail - helper function to set fail condition with reason and message
-func (r *Reconciler) fail(instance *azurev1alpha1.Provider, reason, msg string) (reconcile.Result, error) {
+func (r *Reconciler) fail(instance *azurev1alpha1.ResourceGroup, reason, msg string) (reconcile.Result, error) {
 	instance.Status.UnsetAllConditions()
 	instance.Status.SetFailed(reason, msg)
 	return resultRequeue, r.Update(context.TODO(), instance)
 }
 
-func (r *Reconciler) _create(instance *azurev1alpha1.ResourceGroup, client azure.Client) (reconcile.Result, error) {
+func (r *Reconciler) _create(instance *azurev1alpha1.ResourceGroup, client azure.ResourceGroupClient) (reconcile.Result, error) {
 	// clusterName := fmt.Sprintf("%s%s", clusterNamePrefix, instance.UID)
 
-	_, err := client.CreateResourceGroup(instance.Spec, client)
-	// TODO: better standardizing or errors for Azure
-	// if err != nil && !gcp.IsErrorAlreadyExists(err) {
-	// 	if gcp.IsErrorBadRequest(err) {
-	// 		instance.Status.SetFailed(errorCreateCluster, err.Error())
-	// 		// do not requeue on bad requests
-	// 		return result, r.Update(ctx, instance)
-	// 	}
-	// 	return r.fail(instance, errorCreateCluster, err.Error())
-	// }
+	_, err := client.CreateOrUpdate(ctx, *instance)
 	if err != nil {
 		// This is just a placeholder, need better error handling
 		return r.fail(instance, errorInvalidSubscription, err.Error())
