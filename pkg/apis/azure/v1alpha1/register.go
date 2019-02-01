@@ -50,4 +50,6 @@ var (
 
 func init() {
 	SchemeBuilder.Register(&Provider{}, &ProviderList{})
+
+	SchemeBuilder.Register(&ResourceGroup{}, &ResourceGroupList{})
 }

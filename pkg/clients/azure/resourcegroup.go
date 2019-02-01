@@ -37,7 +37,7 @@ type ResourceGroupClient struct {
 	resources.GroupsClient
 }
 
-// NewResourceGroupClient creates and initializes a AKSClusterClient instance.
+// NewResourceGroupClient creates and initializes a ResourceGroupClient instance.
 func NewResourceGroupClient(provider *v1alpha1.Provider, clientset kubernetes.Interface) (*ResourceGroupClient, error) {
 	// Get Azure Provider Client
 	client, err := NewClient(provider, clientset)

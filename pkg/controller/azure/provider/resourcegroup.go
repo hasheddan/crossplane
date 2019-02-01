@@ -60,9 +60,9 @@ type Reconciler struct {
 	kubeclient kubernetes.Interface
 	recorder   record.EventRecorder
 
-	// validate func(*google.Credentials, []string) error
-	// connect func(*azurev1alpha1.ResourceGroup) (resourcegroup.Client, error)
-	create func(*azurev1alpha1.ResourceGroup, azure.ResourceGroupClient)
+	connect func(*azurev1alpha1.ResourceGroup) (azure.ResourceGroupClient, error)
+	create  func(*azurev1alpha1.ResourceGroup, azure.ResourceGroupClient) (reconcile.Result, error)
+	delete  func(*azurev1alpha1.ResourceGroup, azure.ResourceGroupClient) (reconcile.Result, error)
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -73,8 +73,10 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		kubeclient: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
 		recorder:   mgr.GetRecorder(controllerName),
 	}
-	// r.validate = r._validate
+
+	r.connect = r._connect
 	r.create = r._create
+	r.delete = r._delete
 	return r
 }
 
@@ -102,22 +104,47 @@ func (r *Reconciler) fail(instance *azurev1alpha1.ResourceGroup, reason, msg str
 	return resultRequeue, r.Update(context.TODO(), instance)
 }
 
-func (r *Reconciler) _create(instance *azurev1alpha1.ResourceGroup, client azure.ResourceGroupClient) (reconcile.Result, error) {
-	// clusterName := fmt.Sprintf("%s%s", clusterNamePrefix, instance.UID)
+func (r *Reconciler) _connect(instance *azurev1alpha1.ResourceGroup) (azure.ResourceGroupClient, error) {
+	// Fetch Provider
+	p := &azurev1alpha1.Provider{}
+	providerNamespacedName := types.NamespacedName{
+		Namespace: instance.Namespace,
+		Name:      instance.Spec.ProviderRef.Name,
+	}
+	err := r.Get(ctx, providerNamespacedName, p)
+	if err != nil {
+		return nil, err
+	}
 
+	// Check provider status
+	if !p.IsValid() {
+		return nil, fmt.Errorf("provider status is invalid")
+	}
+
+	return azure.NewResourceGroupClient(p, r.kubeclient)
+}
+
+func (r *Reconciler) _create(instance *azurev1alpha1.ResourceGroup, client azure.ResourceGroupClient) (reconcile.Result, error) 
 	_, err := client.CreateOrUpdate(ctx, *instance)
 	if err != nil {
 		// This is just a placeholder, need better error handling
 		return r.fail(instance, errorInvalidSubscription, err.Error())
 	}
 
-	// instance.Status.State = gcpcomputev1alpha1.ClusterStateProvisioning
-
 	instance.Status.UnsetAllConditions()
-	instance.Status.SetCreating()
-	// instance.Status.ClusterName = clusterName
+	instance.Status.Ready()
 
-	return resultRequeue, r.Update(ctx, instance)
+	return resultRequeue, r.SetUpdate(ctx, instance)
+}
+
+// _delete delete the resource group
+func (r *Reconciler) _delete(instance *azurev1alpha1.ResourceGroup, client azure.ResourceGroupClient) (reconcile.Result, error) {
+	if err := client.Delete(ctx, instance); err != nil {
+		// This is just a placeholder, need better error handling
+		return r.fail(instance, errorInvalidSubscription, err.Error())
+	}
+	instance.Status.UnsetAllConditions()
+	return result, r.Update(ctx, instance)
 }
 
 // Reconcile reads that state of the cluster for a ResourceGroup object and makes changes based on the state read
@@ -140,9 +167,22 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return result, err
 	}
 
+	// Get ResourceGroup Client
+	rgClient, err := r.connect(instance)
+	if err != nil {
+		// This is just a placeholder, need better error handling
+		return r.fail(instance, errorInvalidSubscription, err.Error())
+	}
+
+	// Create the Resource Group
+	if instance.Status.Name = "" {
+		return r.create(instance, rgClient)
+	}
+
+	// This is handled in the Reconciler functions
 	// Update status condition
-	instance.Status.UnsetAllConditions()
-	instance.Status.SetReady()
+	// instance.Status.UnsetAllConditions()
+	// instance.Status.SetReady()
 
 	return result, r.Update(ctx, instance)
 }

@@ -96,7 +96,12 @@ type ResourceGroupSpec struct {
 // ResourceGroupStatus is the status for this ResourceGroup
 type ResourceGroupStatus struct {
 	corev1alpha1.ConditionedStatus
+	// Rationale here is that we do not want the reconciler to know when to create a new Resource Group, so if the name is not set we know it needs to be created
+	Name string `json:"name,omitempty"`
 }
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ResourceGroup is the Schema for the ResourceGroup API
 // +k8s:openapi-gen=true
@@ -107,4 +112,13 @@ type ResourceGroup struct {
 
 	Spec   ResourceGroupSpec   `json:"spec,omitempty"`
 	Status ResourceGroupStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ProviderList contains a list of Provider
+type ResourceGroupList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ResourceGroup `json:"items"`
 }
