@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Crossplane Authors.
+Copyright 2019 The Crossplane Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,10 +18,12 @@ package resource
 
 import (
 	"context"
-	"strings"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -29,7 +31,6 @@ import (
 
 	corev1alpha1 "github.com/crossplaneio/crossplane/pkg/apis/core/v1alpha1"
 	"github.com/crossplaneio/crossplane/pkg/logging"
-	"github.com/crossplaneio/crossplane/pkg/meta"
 )
 
 const (
@@ -37,54 +38,54 @@ const (
 	defaultClassWait           = 1 * time.Minute
 )
 
-var logDefaultClass = logging.Logger.WithName("controller").WithValues("controller", controllerNameDefaultClass)
-
 // Error strings
 const (
-	errFailedList             = "unable to list default resource classes"
-	errNoDefaultClass         = "unable to locate a default resource class for claim kind"
-	errMultipleDefaultClasses = "multiple default classes defined for claim kind"
+	errFailedList             = "unable to list policies for claim kind"
+	errFailedPolicyConversion = "unable to convert located policy to correct kind"
+	errNoPolicies             = "unable to locate a policy that specifies a default class for claim kind"
+	errMultiplePolicies       = "multiple policies that specify a default class defined for claim kind"
 )
 
-// DefaultClassReconciler reconciles resource claims to the
-// default resource class for their given kind. Predicates
-// ensure that only claims with no resource class reference
-// are reconciled.
-type DefaultClassReconciler struct {
-	client   client.Client
-	newClaim func() Claim
-	options  *client.ListOptions
+// A PolicyKind contains the type metadata for a kind of policy.
+type PolicyKind struct {
+	Singular schema.GroupVersionKind
+	Plural   schema.GroupVersionKind
 }
 
-// NewDefaultClassReconciler creates a new DefaultReconciler for the claim kind
-func NewDefaultClassReconciler(m manager.Manager, of ClaimKind) *DefaultClassReconciler {
+// DefaultClassReconciler reconciles resource claims to the
+// default resource class for their given kind according to existing
+// policies. Predicates ensure that only claims with no resource class
+// reference are reconciled.
+type DefaultClassReconciler struct {
+	client        client.Client
+	converter     runtime.ObjectConvertor
+	newClaim      func() Claim
+	newPolicy     func() Policy
+	newPolicyList func() PolicyList
+}
+
+// NewDefaultClassReconciler creates a new DefaultReconciler for the claim kind.
+func NewDefaultClassReconciler(m manager.Manager, of ClaimKind, by PolicyKind) *DefaultClassReconciler {
 	nc := func() Claim { return MustCreateObject(schema.GroupVersionKind(of), m.GetScheme()).(Claim) }
+	np := func() Policy { return MustCreateObject(by.Singular, m.GetScheme()).(Policy) }
+	npl := func() PolicyList { return MustCreateObject(by.Plural, m.GetScheme()).(PolicyList) }
 
-	// Panic early if we've been asked to reconcile a claim that has
+	// Panic early if we've been asked to reconcile a claim, policy, or policy list that has
 	// not been registered with our controller manager's scheme.
-	_ = nc()
-
-	gk := strings.ToLower(schema.GroupVersionKind(of).GroupKind().String())
-
-	// Create list options query that will be used to search
-	// for resource class that is default for claim kind.
-	options := &client.ListOptions{}
-	if err := options.SetLabelSelector(gk + "/default=" + "true"); err != nil {
-		// Panic if unable to set label selector or else panic will occur
-		// when returned reconciler is invoked.
-		panic(err)
-	}
+	_, _, _ = nc(), np(), npl()
 
 	return &DefaultClassReconciler{
-		client:   m.GetClient(),
-		newClaim: nc,
-		options:  options,
+		client:        m.GetClient(),
+		converter:     m.GetScheme(),
+		newClaim:      nc,
+		newPolicy:     np,
+		newPolicyList: npl,
 	}
 }
 
 // Reconcile reconciles a claim to the default class reference for its kind
 func (r *DefaultClassReconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) {
-	logDefaultClass.V(logging.Debug).Info("Reconciling", "request", req)
+	log.V(logging.Debug).Info("Reconciling", "request", req, "controller", controllerNameDefaultClass)
 
 	ctx, cancel := context.WithTimeout(context.Background(), reconcileTimeout)
 	defer cancel()
@@ -96,10 +97,14 @@ func (r *DefaultClassReconciler) Reconcile(req reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, errors.Wrap(IgnoreNotFound(err), errGetClaim)
 	}
 
-	// Get resource classes with claim kind as default
-	classes := &corev1alpha1.ResourceClassList{}
-	if err := r.client.List(ctx, r.options, classes); err != nil {
-		// If this is the first time we encounter no defaults we'll be
+	// Get policies for claim kind in claim's namespace
+	policies := &unstructured.UnstructuredList{}
+	policies.SetGroupVersionKind(r.newPolicyList().GetObjectKind().GroupVersionKind())
+	options := &client.ListOptions{
+		Namespace: req.Namespace,
+	}
+	if err := r.client.List(ctx, options, policies); err != nil {
+		// If this is the first time we encounter listing error we'll be
 		// requeued implicitly due to the status update. If not, we don't
 		// care to requeue because list parameters will not change.
 		claim.SetConditions(corev1alpha1.ReconcileError(errors.New(errFailedList)))
@@ -107,25 +112,44 @@ func (r *DefaultClassReconciler) Reconcile(req reconcile.Request) (reconcile.Res
 	}
 
 	// Check to see if no defaults defined for claim kind.
-	if len(classes.Items) == 0 {
-		// If this is the first time we encounter no defaults we'll be
+	if len(policies.Items) == 0 {
+		// If this is the first time we encounter no policies we'll be
 		// requeued implicitly due to the status update. If not, we will requeue
-		// after a time to see if a default class has been created.
-		claim.SetConditions(corev1alpha1.ReconcileError(errors.New(errNoDefaultClass)))
+		// after a time to see if apolicy has been created.
+		claim.SetConditions(corev1alpha1.ReconcileError(errors.New(errNoPolicies)))
 		return reconcile.Result{RequeueAfter: defaultClassWait}, errors.Wrap(IgnoreNotFound(r.client.Status().Update(ctx, claim)), errUpdateClaimStatus)
 	}
 
-	// Check to see if multiple defaults defined for claim kind.
-	if len(classes.Items) > 1 {
-		// If this is the first time we encounter multiple defaults we'll be
+	// Check to see if multiple policies defined for claim kind.
+	if len(policies.Items) > 1 {
+		// If this is the first time we encounter multiple policies we'll be
 		// requeued implicitly due to the status update. If not, we will requeue
-		// after a time to see if only one default class exists.
-		claim.SetConditions(corev1alpha1.ReconcileError(errors.New(errMultipleDefaultClasses)))
+		// after a time to see if only one policy class exists.
+		claim.SetConditions(corev1alpha1.ReconcileError(errors.New(errMultiplePolicies)))
 		return reconcile.Result{RequeueAfter: defaultClassWait}, errors.Wrap(IgnoreNotFound(r.client.Status().Update(ctx, claim)), errUpdateClaimStatus)
+	}
+
+	// Make sure single item is of correct policy kind
+	policy := r.newPolicy()
+	p := policies.Items[0]
+	fmt.Println(policy.GetObjectKind().GroupVersionKind())
+	p.SetGroupVersionKind(policy.GetObjectKind().GroupVersionKind())
+	if err := r.converter.Convert(&p, policy, ctx); err != nil {
+		fmt.Println("---")
+		fmt.Println(policies.Items[0].GroupVersionKind())
+		fmt.Println(policies.Items[0])
+		fmt.Println("---")
+		fmt.Println(err)
+		fmt.Println("---")
+		// If this is the first time we encounter conversion error we'll be
+		// requeued implicitly due to the status update. If not, we don't
+		// care to requeue because conversion will likely not change.
+		claim.SetConditions(corev1alpha1.ReconcileError(errors.New(errFailedPolicyConversion)))
+		return reconcile.Result{}, errors.Wrap(IgnoreNotFound(r.client.Status().Update(ctx, claim)), errUpdateClaimStatus)
 	}
 
 	// Set class reference on claim to default resource class
-	claim.SetClassReference(meta.ReferenceTo(&classes.Items[0], corev1alpha1.ResourceClassGroupVersionKind))
+	claim.SetClassReference(policy.GetDefaultClassReference())
 
 	// Do not requeue, claim controller will see update and claim
 	// with class reference set will pass predicates.

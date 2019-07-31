@@ -44,6 +44,11 @@ type MockClassReferencer struct{ Ref *corev1.ObjectReference }
 func (m *MockClassReferencer) SetClassReference(r *corev1.ObjectReference) { m.Ref = r }
 func (m *MockClassReferencer) GetClassReference() *corev1.ObjectReference  { return m.Ref }
 
+type MockDefaultClassReferencer struct{ Ref *corev1.ObjectReference }
+
+func (m *MockDefaultClassReferencer) SetDefaultClassReference(r *corev1.ObjectReference) { m.Ref = r }
+func (m *MockDefaultClassReferencer) GetDefaultClassReference() *corev1.ObjectReference  { return m.Ref }
+
 type MockManagedResourceReferencer struct{ Ref *corev1.ObjectReference }
 
 func (m *MockManagedResourceReferencer) SetResourceReference(r *corev1.ObjectReference) { m.Ref = r }
@@ -85,6 +90,15 @@ func (m *MockClaim) GetObjectKind() schema.ObjectKind {
 	return &MockObjectKind{GVK: schema.GroupVersionKind{Group: "mock.crossplane.io", Version: "v1alpha", Kind: "claim"}}
 }
 
+var _ Class = &MockClass{}
+
+type MockClass struct {
+	runtime.Object
+
+	metav1.ObjectMeta
+	MockReclaimer
+}
+
 var _ Managed = &MockManaged{}
 
 type MockManaged struct {
@@ -96,4 +110,29 @@ type MockManaged struct {
 	MockConnectionSecretWriterTo
 	MockReclaimer
 	MockBindable
+}
+
+var _ Policy = &MockPolicy{}
+
+type MockPolicy struct {
+	runtime.Object
+
+	metav1.ObjectMeta
+	MockDefaultClassReferencer
+}
+
+func (m *MockPolicy) GetObjectKind() schema.ObjectKind {
+	return &MockObjectKind{GVK: schema.GroupVersionKind{Group: "g", Version: "v", Kind: "MockPolicy"}}
+}
+
+var _ PolicyList = &MockPolicyList{}
+
+type MockPolicyList struct {
+	runtime.Object
+
+	metav1.ListInterface
+}
+
+func (m *MockPolicyList) GetObjectKind() schema.ObjectKind {
+	return &MockObjectKind{GVK: schema.GroupVersionKind{Group: "mock.crossplane.io", Version: "v1alpha", Kind: "policylist"}}
 }

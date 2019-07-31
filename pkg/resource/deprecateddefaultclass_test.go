@@ -17,29 +17,27 @@ limitations under the License.
 package resource
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/crossplaneio/crossplane/pkg/apis/core/v1alpha1"
+	corev1alpha1 "github.com/crossplaneio/crossplane/pkg/apis/core/v1alpha1"
+	"github.com/crossplaneio/crossplane/pkg/meta"
 	"github.com/crossplaneio/crossplane/pkg/test"
 )
 
-var _ reconcile.Reconciler = &DefaultClassReconciler{}
+var _ reconcile.Reconciler = &DeprecatedDefaultClassReconciler{}
 
-func TestDefaultClassReconcile(t *testing.T) {
+func TestDeprecatedDefaultClassReconcile(t *testing.T) {
 	type args struct {
 		m  manager.Manager
 		of ClaimKind
-		by PolicyKind
 	}
 
 	type want struct {
@@ -49,15 +47,9 @@ func TestDefaultClassReconcile(t *testing.T) {
 
 	errBoom := errors.New("boom")
 	errUnexpected := errors.New("unexpected object type")
-
-	defClassRef := &corev1.ObjectReference{
-		Name:      "default-class",
-		Namespace: "default-namespace",
-	}
-	policy := MockPolicy{}
-	policy.SetDefaultClassReference(defClassRef)
-	// convPolicy, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(&policy)
-	// unPolicy := unstructured.Unstructured{Object: convPolicy}
+	class := corev1alpha1.ResourceClass{}
+	class.SetName("default-class")
+	class.SetNamespace("default-namespace")
 
 	cases := map[string]struct {
 		args args
@@ -67,14 +59,13 @@ func TestDefaultClassReconcile(t *testing.T) {
 			args: args{
 				m: &MockManager{
 					c: &test.MockClient{MockGet: test.NewMockGetFn(errBoom)},
-					s: MockSchemeWith(&MockClaim{}, &MockPolicy{}, &MockPolicyList{}),
+					s: MockSchemeWith(&MockClaim{}),
 				},
 				of: ClaimKind(MockGVK(&MockClaim{})),
-				by: PolicyKind{Singular: MockGVK(&MockPolicy{}), Plural: MockGVK(&MockPolicyList{})},
 			},
 			want: want{err: errors.Wrap(errBoom, errGetClaim)},
 		},
-		"ListPoliciesError": {
+		"ListDefaultClassesError": {
 			args: args{
 				m: &MockManager{
 					c: &test.MockClient{
@@ -90,17 +81,16 @@ func TestDefaultClassReconcile(t *testing.T) {
 						MockList: test.NewMockListFn(errBoom),
 						MockStatusUpdate: test.NewMockStatusUpdateFn(nil, func(got runtime.Object) error {
 							want := &MockClaim{}
-							want.SetConditions(v1alpha1.ReconcileError(errors.New(errFailedList)))
+							want.SetConditions(v1alpha1.ReconcileError(errors.New(errFailedListDeprecated)))
 							if diff := cmp.Diff(want, got, test.EquateConditions()); diff != "" {
 								t.Errorf("-want, +got:\n%s", diff)
 							}
 							return nil
 						}),
 					},
-					s: MockSchemeWith(&MockClaim{}, &MockPolicy{}, &MockPolicyList{}),
+					s: MockSchemeWith(&MockClaim{}),
 				},
 				of: ClaimKind(MockGVK(&MockClaim{})),
-				by: PolicyKind{Singular: MockGVK(&MockPolicy{}), Plural: MockGVK(&MockPolicyList{})},
 			},
 			want: want{result: reconcile.Result{}},
 		},
@@ -119,8 +109,10 @@ func TestDefaultClassReconcile(t *testing.T) {
 						}),
 						MockList: test.NewMockListFn(nil, func(o runtime.Object) error {
 							switch o := o.(type) {
-							case *unstructured.UnstructuredList:
-								*o = unstructured.UnstructuredList{}
+							case *corev1alpha1.ResourceClassList:
+								cm := &corev1alpha1.ResourceClassList{}
+								cm.Items = []corev1alpha1.ResourceClass{}
+								*o = *cm
 								return nil
 							default:
 								return errUnexpected
@@ -128,21 +120,20 @@ func TestDefaultClassReconcile(t *testing.T) {
 						}),
 						MockStatusUpdate: test.NewMockStatusUpdateFn(nil, func(got runtime.Object) error {
 							want := &MockClaim{}
-							want.SetConditions(v1alpha1.ReconcileError(errors.New(errNoPolicies)))
+							want.SetConditions(v1alpha1.ReconcileError(errors.New(errNoDefaultClass)))
 							if diff := cmp.Diff(want, got, test.EquateConditions()); diff != "" {
 								t.Errorf("-want, +got:\n%s", diff)
 							}
 							return nil
 						}),
 					},
-					s: MockSchemeWith(&MockClaim{}, &MockPolicy{}, &MockPolicyList{}),
+					s: MockSchemeWith(&MockClaim{}),
 				},
 				of: ClaimKind(MockGVK(&MockClaim{})),
-				by: PolicyKind{Singular: MockGVK(&MockPolicy{}), Plural: MockGVK(&MockPolicyList{})},
 			},
-			want: want{result: reconcile.Result{RequeueAfter: defaultClassWait}},
+			want: want{result: reconcile.Result{RequeueAfter: deprecatedDefaultClassWait}},
 		},
-		"MultipleDefaultClassPolicies": {
+		"MultipleDefaultClasses": {
 			args: args{
 				m: &MockManager{
 					c: &test.MockClient{
@@ -157,9 +148,9 @@ func TestDefaultClassReconcile(t *testing.T) {
 						}),
 						MockList: test.NewMockListFn(nil, func(o runtime.Object) error {
 							switch o := o.(type) {
-							case *unstructured.UnstructuredList:
-								cm := &unstructured.UnstructuredList{}
-								cm.Items = []unstructured.Unstructured{
+							case *corev1alpha1.ResourceClassList:
+								cm := &corev1alpha1.ResourceClassList{}
+								cm.Items = []corev1alpha1.ResourceClass{
 									{},
 									{},
 								}
@@ -171,72 +162,65 @@ func TestDefaultClassReconcile(t *testing.T) {
 						}),
 						MockStatusUpdate: test.NewMockStatusUpdateFn(nil, func(got runtime.Object) error {
 							want := &MockClaim{}
-							want.SetConditions(v1alpha1.ReconcileError(errors.New(errMultiplePolicies)))
+							want.SetConditions(v1alpha1.ReconcileError(errors.New(errMultipleDefaultClasses)))
 							if diff := cmp.Diff(want, got, test.EquateConditions()); diff != "" {
 								t.Errorf("-want, +got:\n%s", diff)
 							}
 							return nil
 						}),
 					},
-					s: MockSchemeWith(&MockClaim{}, &MockPolicy{}, &MockPolicyList{}),
+					s: MockSchemeWith(&MockClaim{}),
 				},
 				of: ClaimKind(MockGVK(&MockClaim{})),
-				by: PolicyKind{Singular: MockGVK(&MockPolicy{}), Plural: MockGVK(&MockPolicyList{})},
 			},
-			want: want{result: reconcile.Result{RequeueAfter: defaultClassWait}},
+			want: want{result: reconcile.Result{RequeueAfter: deprecatedDefaultClassWait}},
 		},
-		// "Successful": {
-		// 	args: args{
-		// 		m: &MockManager{
-		// 			c: &test.MockClient{
-		// 				MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
-		// 					switch o := o.(type) {
-		// 					case *MockClaim:
-		// 						*o = MockClaim{}
-		// 						return nil
-		// 					default:
-		// 						return errUnexpected
-		// 					}
-		// 				}),
-		// 				MockList: test.NewMockListFn(nil, func(o runtime.Object) error {
-		// 					switch o := o.(type) {
-		// 					case *unstructured.UnstructuredList:
-		// 						cm := &unstructured.UnstructuredList{}
-		// 						cm.Items = []unstructured.Unstructured{
-		// 							unPolicy,
-		// 						}
-		// 						*o = *cm
-		// 						return nil
-		// 					default:
-		// 						return errUnexpected
-		// 					}
-		// 				}),
-		// 				MockUpdate: test.NewMockUpdateFn(nil, func(got runtime.Object) error {
-		// 					want := &MockClaim{}
-		// 					want.SetClassReference(policy.GetDefaultClassReference())
-		// 					if diff := cmp.Diff(want, got, test.EquateConditions()); diff != "" {
-		// 						t.Errorf("-want, +got:\n%s", diff)
-		// 					}
-		// 					return nil
-		// 				}),
-		// 			},
-		// 			s: MockSchemeWith(&MockClaim{}, &MockPolicy{}, &MockPolicyList{}),
-		// 		},
-		// 		of: ClaimKind(MockGVK(&MockClaim{})),
-		// 		by: PolicyKind{Singular: MockGVK(&MockPolicy{}), Plural: MockGVK(&MockPolicyList{})},
-		// 	},
-		// 	want: want{result: reconcile.Result{Requeue: false}},
-		// },
+		"Successful": {
+			args: args{
+				m: &MockManager{
+					c: &test.MockClient{
+						MockGet: test.NewMockGetFn(nil, func(o runtime.Object) error {
+							switch o := o.(type) {
+							case *MockClaim:
+								*o = MockClaim{}
+								return nil
+							default:
+								return errUnexpected
+							}
+						}),
+						MockList: test.NewMockListFn(nil, func(o runtime.Object) error {
+							switch o := o.(type) {
+							case *corev1alpha1.ResourceClassList:
+								cm := &corev1alpha1.ResourceClassList{}
+								cm.Items = []corev1alpha1.ResourceClass{
+									class,
+								}
+								*o = *cm
+								return nil
+							default:
+								return errUnexpected
+							}
+						}),
+						MockUpdate: test.NewMockUpdateFn(nil, func(got runtime.Object) error {
+							want := &MockClaim{}
+							want.SetClassReference(meta.ReferenceTo(class.GetObjectMeta(), corev1alpha1.ResourceClassGroupVersionKind))
+							if diff := cmp.Diff(want, got, test.EquateConditions()); diff != "" {
+								t.Errorf("-want, +got:\n%s", diff)
+							}
+							return nil
+						}),
+					},
+					s: MockSchemeWith(&MockClaim{}),
+				},
+				of: ClaimKind(MockGVK(&MockClaim{})),
+			},
+			want: want{result: reconcile.Result{Requeue: false}},
+		},
 	}
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			kinds := tc.args.m.GetScheme().AllKnownTypes()
-			for k, v := range kinds {
-				fmt.Println(k.String())
-				fmt.Println(v.String())
-			}
-			r := NewDefaultClassReconciler(tc.args.m, tc.args.of, tc.args.by)
+			r := NewDeprecatedDefaultClassReconciler(tc.args.m, tc.args.of)
 			got, err := r.Reconcile(reconcile.Request{})
 
 			if diff := cmp.Diff(tc.want.err, err, test.EquateErrors()); diff != "" {

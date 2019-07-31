@@ -25,8 +25,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/crossplaneio/crossplane/pkg/apis/core/v1alpha1"
+	"github.com/crossplaneio/crossplane/pkg/logging"
 	"github.com/crossplaneio/crossplane/pkg/meta"
 )
+
+// Package logger
+var log = logging.Logger.WithName("controller")
 
 // A ConnectionSecretOwner may create and manage a connection secret.
 type ConnectionSecretOwner interface {
