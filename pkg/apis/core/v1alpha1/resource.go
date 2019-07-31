@@ -135,3 +135,19 @@ type ResourceStatus struct {
 	ConditionedStatus `json:",inline"`
 	BindingStatus     `json:",inline"`
 }
+
+// Policy contains standard fields that all policies should include. Policy
+// should typically be embedded in a specific resource claim policy.
+type Policy struct {
+	DefaultClassReference *corev1.ObjectReference `json:"defaultClassRef,omitempty"`
+}
+
+// SetDefaultClassReference of this Policy
+func (p *Policy) SetDefaultClassReference(r *corev1.ObjectReference) {
+	p.DefaultClassReference = r
+}
+
+// GetDefaultClassReference of this Policy
+func (p *Policy) GetDefaultClassReference() *corev1.ObjectReference {
+	return p.DefaultClassReference
+}

@@ -56,11 +56,12 @@ type PolicyKind struct {
 // policies. Predicates ensure that only claims with no resource class
 // reference are reconciled.
 type DefaultClassReconciler struct {
-	client        client.Client
-	converter     runtime.ObjectConvertor
-	newClaim      func() Claim
-	newPolicy     func() Policy
-	newPolicyList func() PolicyList
+	client         client.Client
+	converter      runtime.ObjectConvertor
+	policyKind     schema.GroupVersionKind
+	policyListKind schema.GroupVersionKind
+	newClaim       func() Claim
+	newPolicy      func() Policy
 }
 
 // NewDefaultClassReconciler creates a new DefaultReconciler for the claim kind.
@@ -74,11 +75,12 @@ func NewDefaultClassReconciler(m manager.Manager, of ClaimKind, by PolicyKind) *
 	_, _, _ = nc(), np(), npl()
 
 	return &DefaultClassReconciler{
-		client:        m.GetClient(),
-		converter:     m.GetScheme(),
-		newClaim:      nc,
-		newPolicy:     np,
-		newPolicyList: npl,
+		client:         m.GetClient(),
+		converter:      m.GetScheme(),
+		policyKind:     by.Singular,
+		policyListKind: by.Plural,
+		newClaim:       nc,
+		newPolicy:      np,
 	}
 }
 
@@ -98,7 +100,7 @@ func (r *DefaultClassReconciler) Reconcile(req reconcile.Request) (reconcile.Res
 
 	// Get policies for claim kind in claim's namespace
 	policies := &unstructured.UnstructuredList{}
-	policies.SetGroupVersionKind(r.newPolicyList().GetObjectKind().GroupVersionKind())
+	policies.SetGroupVersionKind(r.policyListKind)
 	options := &client.ListOptions{
 		Namespace: req.Namespace,
 	}
@@ -131,8 +133,8 @@ func (r *DefaultClassReconciler) Reconcile(req reconcile.Request) (reconcile.Res
 	// Make sure single item is of correct policy kind
 	policy := r.newPolicy()
 	p := policies.Items[0]
-	p.SetGroupVersionKind(policy.GetObjectKind().GroupVersionKind())
-	if err := r.converter.Convert(&p, &policy, ctx); err != nil {
+	p.SetGroupVersionKind(r.policyKind)
+	if err := r.converter.Convert(&p, policy, ctx); err != nil {
 		// If this is the first time we encounter conversion error we'll be
 		// requeued implicitly due to the status update. If not, we don't
 		// care to requeue because conversion will likely not change.

@@ -57,6 +57,9 @@ func TestDefaultClassReconcile(t *testing.T) {
 	policy.SetDefaultClassReference(defClassRef)
 	// convPolicy, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(&policy)
 	// unPolicy := unstructured.Unstructured{Object: convPolicy}
+	// sch := runtime.NewScheme()
+	// sch.AddKnownTypes(MockGV, &MockClaim{})
+	// sch.AddKnownTypes(cachev1alpha1.RedisClusterGroupVersionKind.GroupVersion(), &cachev1alpha1.RedisClusterPolicy{}, &cachev1alpha1.RedisClusterPolicyList{})
 
 	cases := map[string]struct {
 		args args
@@ -219,10 +222,10 @@ func TestDefaultClassReconcile(t *testing.T) {
 		// 					return nil
 		// 				}),
 		// 			},
-		// 			s: MockSchemeWith(&MockClaim{}, &MockPolicy{}, &MockPolicyList{}),
+		// 			s: sch,
 		// 		},
 		// 		of: ClaimKind(MockGVK(&MockClaim{})),
-		// 		by: PolicyKind{Singular: MockGVK(&MockPolicy{}), Plural: MockGVK(&MockPolicyList{})},
+		// 		by: PolicyKind{Singular: cachev1alpha1.RedisClusterPolicyGroupVersionKind, Plural: cachev1alpha1.RedisClusterPolicyListGroupVersionKind},
 		// 	},
 		// 	want: want{result: reconcile.Result{Requeue: false}},
 		// },

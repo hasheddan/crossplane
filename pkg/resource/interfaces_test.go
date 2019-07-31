@@ -117,18 +117,10 @@ type MockPolicy struct {
 	MockDefaultClassReferencer
 }
 
-func (m *MockPolicy) GetObjectKind() schema.ObjectKind {
-	return &MockObjectKind{GVK: schema.GroupVersionKind{Group: "g", Version: "v", Kind: "MockPolicy"}}
-}
-
 var _ PolicyList = &MockPolicyList{}
 
 type MockPolicyList struct {
 	runtime.Object
 
 	metav1.ListInterface
-}
-
-func (m *MockPolicyList) GetObjectKind() schema.ObjectKind {
-	return &MockObjectKind{GVK: schema.GroupVersionKind{Group: "g", Version: "v", Kind: "MockPolicyList"}}
 }

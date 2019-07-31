@@ -23,6 +23,7 @@ import (
 	"github.com/crossplaneio/crossplane/pkg/controller/azure"
 	"github.com/crossplaneio/crossplane/pkg/controller/defaultclass"
 	"github.com/crossplaneio/crossplane/pkg/controller/gcp"
+	"github.com/crossplaneio/crossplane/pkg/controller/sdc"
 	"github.com/crossplaneio/crossplane/pkg/controller/workload"
 )
 
@@ -34,6 +35,7 @@ func init() {
 		gcp.AddToManager,
 		workload.AddToManager,
 		defaultclass.AddToManager,
+		sdc.AddToManager,
 	)
 }
 
