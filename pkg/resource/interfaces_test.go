@@ -86,10 +86,6 @@ type MockClaim struct {
 	MockBindable
 }
 
-func (m *MockClaim) GetObjectKind() schema.ObjectKind {
-	return &MockObjectKind{GVK: schema.GroupVersionKind{Group: "mock.crossplane.io", Version: "v1alpha", Kind: "claim"}}
-}
-
 var _ Class = &MockClass{}
 
 type MockClass struct {
@@ -134,5 +130,5 @@ type MockPolicyList struct {
 }
 
 func (m *MockPolicyList) GetObjectKind() schema.ObjectKind {
-	return &MockObjectKind{GVK: schema.GroupVersionKind{Group: "mock.crossplane.io", Version: "v1alpha", Kind: "policylist"}}
+	return &MockObjectKind{GVK: schema.GroupVersionKind{Group: "g", Version: "v", Kind: "MockPolicyList"}}
 }

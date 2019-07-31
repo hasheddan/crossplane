@@ -18,7 +18,6 @@ package resource
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -132,15 +131,8 @@ func (r *DefaultClassReconciler) Reconcile(req reconcile.Request) (reconcile.Res
 	// Make sure single item is of correct policy kind
 	policy := r.newPolicy()
 	p := policies.Items[0]
-	fmt.Println(policy.GetObjectKind().GroupVersionKind())
 	p.SetGroupVersionKind(policy.GetObjectKind().GroupVersionKind())
-	if err := r.converter.Convert(&p, policy, ctx); err != nil {
-		fmt.Println("---")
-		fmt.Println(policies.Items[0].GroupVersionKind())
-		fmt.Println(policies.Items[0])
-		fmt.Println("---")
-		fmt.Println(err)
-		fmt.Println("---")
+	if err := r.converter.Convert(&p, &policy, ctx); err != nil {
 		// If this is the first time we encounter conversion error we'll be
 		// requeued implicitly due to the status update. If not, we don't
 		// care to requeue because conversion will likely not change.

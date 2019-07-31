@@ -17,7 +17,6 @@ limitations under the License.
 package resource
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -231,11 +230,6 @@ func TestDefaultClassReconcile(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			kinds := tc.args.m.GetScheme().AllKnownTypes()
-			for k, v := range kinds {
-				fmt.Println(k.String())
-				fmt.Println(v.String())
-			}
 			r := NewDefaultClassReconciler(tc.args.m, tc.args.of, tc.args.by)
 			got, err := r.Reconcile(reconcile.Request{})
 
