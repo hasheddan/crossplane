@@ -76,6 +76,34 @@ func HasProvisioner(c client.Client, cr ClassReferencer, provisioner string) boo
 	return strings.EqualFold(cs.Provisioner, provisioner)
 }
 
+// NOTE(hasheddan): HasClassReferenceKind should eventually replace ObjectHasProvisioner
+// when strongly typed resource classes are implemented
+
+// HasClassReferenceKind accepts ResourceClaims that reference the correct kind of resourceclass
+func HasClassReferenceKind(k ClassKind) PredicateFn {
+	return func(obj runtime.Object) bool {
+		cr, ok := obj.(ClassReferencer)
+		if !ok {
+			return false
+		}
+
+		ref := cr.GetClassReference()
+		if ref == nil {
+			return false
+		}
+
+		gvk := ref.GroupVersionKind()
+
+		if gvk.Group != k.Group {
+			return false
+		}
+		if gvk.Version != k.Version {
+			return false
+		}
+		return gvk.Kind == k.Kind
+	}
+}
+
 // NoClassReference accepts ResourceClaims that do not reference a specific ResourceClass
 func NoClassReference() PredicateFn {
 	return func(obj runtime.Object) bool {
