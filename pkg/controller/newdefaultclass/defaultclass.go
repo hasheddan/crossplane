@@ -14,28 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package newdefaultclass
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
 
-	"github.com/crossplaneio/crossplane/pkg/controller/aws"
-	"github.com/crossplaneio/crossplane/pkg/controller/azure"
-	"github.com/crossplaneio/crossplane/pkg/controller/defaultclass"
-	"github.com/crossplaneio/crossplane/pkg/controller/gcp"
-	"github.com/crossplaneio/crossplane/pkg/controller/newdefaultclass"
-	"github.com/crossplaneio/crossplane/pkg/controller/workload"
+const (
+	controllerBaseName = "newdefaultclass.crossplane.io"
 )
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
 	AddToManagerFuncs = append(AddToManagerFuncs,
-		aws.AddToManager,
-		azure.AddToManager,
-		gcp.AddToManager,
-		workload.AddToManager,
-		defaultclass.AddToManager,
-		newdefaultclass.AddToManager,
+		AddRedisCluster,
 	)
 }
 
