@@ -30,7 +30,6 @@ func init() {
 		AddBucket,
 		AddMySQLInstance,
 		AddPostgreSQLInstance,
-		AddRedisCluster,
 		AddKubernetesCluster,
 	)
 }

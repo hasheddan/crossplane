@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -94,13 +96,7 @@ func HasClassReferenceKind(k ClassKind) PredicateFn {
 
 		gvk := ref.GroupVersionKind()
 
-		if gvk.Group != k.Group {
-			return false
-		}
-		if gvk.Version != k.Version {
-			return false
-		}
-		return gvk.Kind == k.Kind
+		return gvk == schema.GroupVersionKind(k)
 	}
 }
 

@@ -39,7 +39,7 @@ import (
 func AddClaim(mgr manager.Manager) error {
 	r := resource.NewClaimReconciler(mgr,
 		resource.ClaimKind(cachev1alpha1.RedisClusterGroupVersionKind),
-		resource.ClassKind(corev1alpha1.ResourceClassGroupVersionKind),
+		resource.ClassKind(v1alpha1.CloudMemorystoreInstanceClassGroupVersionKind),
 		resource.ManagedKind(v1alpha1.CloudMemorystoreInstanceGroupVersionKind),
 		resource.WithManagedConfigurators(
 			resource.ManagedConfiguratorFn(ConfigureCloudMemorystoreInstance),
@@ -56,11 +56,10 @@ func AddClaim(mgr manager.Manager) error {
 		return errors.Wrapf(err, "cannot watch for %s", v1alpha1.CloudMemorystoreInstanceGroupVersionKind)
 	}
 
-	p := v1alpha1.CloudMemorystoreInstanceKindAPIVersion
 	return errors.Wrapf(c.Watch(
 		&source.Kind{Type: &cachev1alpha1.RedisCluster{}},
 		&handler.EnqueueRequestForObject{},
-		resource.NewPredicates(resource.ObjectHasProvisioner(mgr.GetClient(), p)),
+		resource.NewPredicates(resource.HasClassReferenceKind(resource.ClassKind(v1alpha1.CloudMemorystoreInstanceClassGroupVersionKind))),
 	), "cannot watch for %s", cachev1alpha1.RedisClusterGroupVersionKind)
 }
 
