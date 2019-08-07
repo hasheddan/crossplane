@@ -17,14 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"strconv"
-
 	"github.com/Azure/azure-sdk-for-go/services/redis/mgmt/2018-03-01/redis"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1alpha1 "github.com/crossplaneio/crossplane/pkg/apis/core/v1alpha1"
-	"github.com/crossplaneio/crossplane/pkg/util"
 )
 
 // SKU options.
@@ -60,12 +57,10 @@ const (
 	SupportedRedisVersion = "3.2"
 )
 
-// RedisSpec defines the desired state of Redis
+// RedisParameters defines the fields required for provisioning Redis
 // Most fields map directly to an Azure Redis resource.
 // https://docs.microsoft.com/en-us/rest/api/redis/redis/get#redisresource
-type RedisSpec struct {
-	corev1alpha1.ResourceSpec `json:",inline"`
-
+type RedisParameters struct {
 	// ResourceGroupName in which to create this resource.
 	ResourceGroupName string `json:"resourceGroupName"`
 
@@ -94,6 +89,12 @@ type RedisSpec struct {
 
 	// RedisConfiguration specifies Redis Settings.
 	RedisConfiguration map[string]string `json:"redisConfiguration,omitempty"`
+}
+
+// RedisSpec defines the desired state of Redis
+type RedisSpec struct {
+	corev1alpha1.ResourceSpec `json:",inline"`
+	RedisParameters           `json:",inline"`
 }
 
 // TODO(negz): Rename SKU to PricingTier? Both SQL databases and Redis caches
@@ -226,39 +227,40 @@ type RedisList struct {
 	Items           []Redis `json:"items"`
 }
 
-// NewRedisSpec creates a new RedisSpec
-// from the given properties map.
-func NewRedisSpec(properties map[string]string) *RedisSpec {
-	spec := &RedisSpec{
-		ResourceSpec: corev1alpha1.ResourceSpec{
-			ReclaimPolicy: corev1alpha1.ReclaimRetain,
-		},
+// RedisClassSpecTemplate is the Schema for the resource class
+type RedisClassSpecTemplate struct {
+	corev1alpha1.ResourceClassSpecTemplate `json:",inline"`
+	RedisParameters                        `json:",inline"`
+}
 
-		// Note that these keys should match the JSON tags of their respective
-		// RedisSpec fields.
-		ResourceGroupName:  properties["resourceGroupName"],
-		Location:           properties["location"],
-		StaticIP:           properties["staticIP"],
-		SubnetID:           properties["subnetId"],
-		RedisConfiguration: util.ParseMap(properties["redisConfiguration"]),
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-		// TODO(negz): Remove the sku prefix here? This feels clearer, but the
-		// Azure SQL server equivalent uses bare "tier", "vcores", etc.
-		SKU: SKUSpec{
-			Name:   properties["skuName"],
-			Family: properties["skuFamily"],
-		},
-	}
+// RedisClass is the Schema for the resource class
+// +kubebuilder:printcolumn:name="PROVIDER-REF",type="string",JSONPath=".specTemplate.providerRef.name"
+// +kubebuilder:printcolumn:name="RECLAIM-POLICY",type="string",JSONPath=".specTemplate.reclaimPolicy"
+// +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
+type RedisClass struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	if b, err := strconv.ParseBool(properties["enableNonSslPort"]); err == nil {
-		spec.EnableNonSSLPort = b
-	}
-	if i, err := strconv.Atoi(properties["shardCount"]); err == nil {
-		spec.ShardCount = i
-	}
-	if i, err := strconv.Atoi(properties["skuCapacity"]); err == nil {
-		spec.SKU.Capacity = i
-	}
+	SpecTemplate RedisClassSpecTemplate `json:"specTemplate,omitempty"`
+}
 
-	return spec
+// GetReclaimPolicy of this RedisClass.
+func (i *RedisClass) GetReclaimPolicy() corev1alpha1.ReclaimPolicy {
+	return i.SpecTemplate.ReclaimPolicy
+}
+
+// SetReclaimPolicy of this RedisClass.
+func (i *RedisClass) SetReclaimPolicy(p corev1alpha1.ReclaimPolicy) {
+	i.SpecTemplate.ReclaimPolicy = p
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// RedisClassList contains a list of cloud memorystore resource classes.
+type RedisClassList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []RedisClass `json:"items"`
 }

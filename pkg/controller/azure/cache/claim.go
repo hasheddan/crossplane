@@ -73,7 +73,7 @@ func ConfigureRedis(_ context.Context, cm resource.Claim, cs resource.Class, mg 
 		return errors.Errorf("expected resource claim %s to be %s", cm.GetName(), cachev1alpha1.RedisClusterGroupVersionKind)
 	}
 
-	rs, csok := cs.(*corev1alpha1.ResourceClass)
+	rs, csok := cs.(*v1alpha1.RedisClass)
 	if !csok {
 		return errors.Errorf("expected resource class %s to be %s", cs.GetName(), corev1alpha1.ResourceClassGroupVersionKind)
 	}
@@ -83,14 +83,18 @@ func ConfigureRedis(_ context.Context, cm resource.Claim, cs resource.Class, mg 
 		return errors.Errorf("expected managed resource %s to be %s", mg.GetName(), v1alpha1.RedisGroupVersionKind)
 	}
 
-	spec := v1alpha1.NewRedisSpec(rs.Parameters)
+	spec := &v1alpha1.RedisSpec{
+		ResourceSpec: corev1alpha1.ResourceSpec{
+			ReclaimPolicy:     rs.SpecTemplate.ReclaimPolicy,
+			ProviderReference: rs.SpecTemplate.ProviderReference,
+		},
+		RedisParameters: rs.SpecTemplate.RedisParameters,
+	}
 	if err := resolveAzureClassValues(rc); err != nil {
 		return errors.Wrap(err, "cannot resolve Azure class instance values")
 	}
 
 	spec.WriteConnectionSecretToReference = corev1.LocalObjectReference{Name: string(cm.GetUID())}
-	spec.ProviderReference = rs.ProviderReference
-	spec.ReclaimPolicy = rs.ReclaimPolicy
 
 	i.Spec = *spec
 

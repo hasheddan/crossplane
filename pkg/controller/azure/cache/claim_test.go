@@ -80,7 +80,7 @@ func TestConfigureRedis(t *testing.T) {
 							WriteConnectionSecretToReference: corev1.LocalObjectReference{Name: string(claimUID)},
 							ProviderReference:                &corev1.ObjectReference{Name: providerName},
 						},
-						RedisConfiguration: map[string]string{},
+						RedisParameters: v1alpha1.RedisParameters{},
 					},
 				},
 				err: nil,
