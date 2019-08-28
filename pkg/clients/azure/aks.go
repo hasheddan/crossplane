@@ -129,10 +129,14 @@ func (c *AKSClusterClient) CreateOrUpdateBegin(ctx context.Context, instance com
 			DNSPrefix:         &spec.DNSNamePrefix,
 			AgentPoolProfiles: &[]containerservice.ManagedClusterAgentPoolProfile{
 				{
-					Name:   to.StringPtr(AgentPoolProfileName),
-					Count:  &nodeCount,
-					VMSize: containerservice.VMSizeTypes(spec.NodeVMSize),
+					Name:         to.StringPtr(AgentPoolProfileName),
+					Count:        &nodeCount,
+					VMSize:       containerservice.VMSizeTypes(spec.NodeVMSize),
+					VnetSubnetID: to.StringPtr(spec.VnetSubnetID),
 				},
+			},
+			NetworkProfile: &containerservice.NetworkProfile{
+				NetworkPlugin: containerservice.Azure,
 			},
 			ServicePrincipalProfile: &containerservice.ManagedClusterServicePrincipalProfile{
 				ClientID: to.StringPtr(appID),

@@ -204,6 +204,9 @@ spec:
               description: Version is the Kubernetes version that will be deployed
                 to the cluster
               type: string
+            vnetSubnetID:
+              description: VnetSubnetID test
+              type: string
             writeConnectionSecretToRef:
               description: LocalObjectReference contains enough information to let
                 you locate the referenced object inside the same namespace.

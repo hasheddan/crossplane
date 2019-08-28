@@ -5,8 +5,9 @@ metadata:
   name: akscluster
   namespace: crossplane-system
 specTemplate:
-  resourceGroupName: group-westus-1
-  location: West US 2
+  resourceGroupName: test
+  vnetSubnetID: /subscriptions/038f2b7c-3265-43b8-8624-c9ad5da610a8/resourceGroups/test/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet
+  location: Central US
   version: "1.12.8"
   nodeCount: 1
   nodeVMSize: Standard_B2s

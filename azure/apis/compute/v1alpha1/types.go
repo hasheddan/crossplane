@@ -41,6 +41,9 @@ type AKSClusterParameters struct {
 	// Location is the Azure location that the cluster will be created in
 	Location string `json:"location"` //--location
 
+	// VnetSubnetID test
+	VnetSubnetID string `json:"vnetSubnetID,omitempty"`
+
 	// Version is the Kubernetes version that will be deployed to the cluster
 	Version string `json:"version"` //--kubernetes-version
 
