@@ -1,4 +1,11 @@
-# Deploying Wordpress in Azure
+---
+title: "Using Azure Services"
+toc: true
+weight: 330
+indent: true
+---
+
+# Using Azure Services
 
 This user guide will walk you through Wordpress application deployment using
 Crossplane managed resources and the official Wordpress Docker image.

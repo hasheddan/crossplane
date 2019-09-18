@@ -1,7 +1,7 @@
 ---
 title: "Crossplane Stacks Guide: AWS Setup"
 toc: true
-weight: 332
+weight: 430
 indent: true
 ---
 

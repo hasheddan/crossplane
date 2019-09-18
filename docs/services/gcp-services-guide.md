@@ -1,11 +1,11 @@
 ---
-title: "GCP Services Guide"
+title: "Using GCP Services"
 toc: true
-weight: 420
+weight: 320
 indent: true
 ---
 
-# GCP Services Guide
+# Using GCP Services
 
 ## Table of Contents
 
