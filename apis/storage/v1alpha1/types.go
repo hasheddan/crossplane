@@ -150,9 +150,6 @@ var _ resource.PortableClass = &BucketClass{}
 
 // BucketClass contains a namespace-scoped portable class for Bucket
 type BucketClass struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
 	runtimev1alpha1.PortableClass `json:",inline"`
 }
 

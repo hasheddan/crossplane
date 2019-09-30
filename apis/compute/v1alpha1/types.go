@@ -113,9 +113,6 @@ var _ resource.PortableClass = &KubernetesClusterClass{}
 
 // KubernetesClusterClass contains a namespace-scoped Class for KubernetesCluster
 type KubernetesClusterClass struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
 	runtimev1alpha1.PortableClass `json:",inline"`
 }
 

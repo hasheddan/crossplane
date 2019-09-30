@@ -115,9 +115,6 @@ var _ resource.PortableClass = &RedisClusterClass{}
 
 // RedisClusterClass contains a namespace-scoped portable class for RedisCluster
 type RedisClusterClass struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
 	runtimev1alpha1.PortableClass `json:",inline"`
 }
 

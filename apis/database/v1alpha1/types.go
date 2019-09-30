@@ -114,9 +114,6 @@ var _ resource.PortableClass = &MySQLInstanceClass{}
 
 // MySQLInstanceClass contains a namespace-scoped portable class for MySQLInstance
 type MySQLInstanceClass struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
 	runtimev1alpha1.PortableClass `json:",inline"`
 }
 
@@ -245,9 +242,6 @@ var _ resource.PortableClass = &PostgreSQLInstanceClass{}
 
 // PostgreSQLInstanceClass contains a namespace-scoped portable class for PostgreSQLInstance
 type PostgreSQLInstanceClass struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
 	runtimev1alpha1.PortableClass `json:",inline"`
 }
 
