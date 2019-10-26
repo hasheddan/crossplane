@@ -1,5 +1,8 @@
 ---
-title: Using Azure Services toc: true weight: 440 indent: true
+title: Using Azure Services
+toc: true
+weight: 440
+indent: true
 ---
 # Deploying Wordpress in Azure
 

@@ -1,5 +1,8 @@
 ---
-title: Using AWS Services toc: true weight: 430 indent: true
+title: Using AWS Services
+toc: true
+weight: 430
+indent: true
 ---
 
 # Deploying Wordpress in Amazon Web Services (AWS)
