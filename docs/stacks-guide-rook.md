@@ -1,5 +1,8 @@
 ---
-title: "Stacks Guide: Rook" toc: true weight: 550 indent: true
+title: "Stacks Guide: Rook"
+toc: true
+weight: 550
+indent: true
 ---
 
 # Stacks Guide: Rook
