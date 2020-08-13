@@ -17,6 +17,9 @@ spec:
     type: {{ .Values.deploymentStrategy }}
   template:
     metadata:
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
+        container.seccomp.security.alpha.kubernetes.io/{{ .Chart.Name }}: "localhost/operator/seccomp-operator/crossplane/crossplane.json"
       labels:
         app: {{ template "name" . }}
         release: {{ .Release.Name }}

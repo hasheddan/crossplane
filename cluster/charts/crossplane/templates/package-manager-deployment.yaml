@@ -20,6 +20,9 @@ spec:
       labels:
         app: {{ template "name" . }}-package-manager
         release: {{ .Release.Name }}
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
+        container.seccomp.security.alpha.kubernetes.io/{{ .Chart.Name }}: "localhost/operator/seccomp-operator/crossplane/package-manager.json"
     spec:
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName | quote }}
