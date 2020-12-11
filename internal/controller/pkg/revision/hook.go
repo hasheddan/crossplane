@@ -28,7 +28,9 @@ import (
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
 
-	pkgmeta "github.com/crossplane/crossplane/apis/pkg/meta/v1beta1"
+	pkgmeta "github.com/crossplane/crossplane/apis/pkg/meta"
+	pkgmetav1alpha1 "github.com/crossplane/crossplane/apis/pkg/meta/v1alpha1"
+	pkgmetav1beta1 "github.com/crossplane/crossplane/apis/pkg/meta/v1beta1"
 	v1 "github.com/crossplane/crossplane/apis/pkg/v1"
 	"github.com/crossplane/crossplane/apis/pkg/v1alpha1"
 )
@@ -73,9 +75,11 @@ func NewProviderHooks(client resource.ClientApplicator, namespace string) *Provi
 // Pre cleans up a packaged controller and service account if the revision is
 // inactive.
 func (h *ProviderHooks) Pre(ctx context.Context, pkg runtime.Object, pr v1.PackageRevision) error {
-	pkgProvider, ok := pkg.(*pkgmeta.Provider)
+	pkgProvider, ok := pkg.(*pkgmetav1beta1.Provider)
 	if !ok {
-		return errors.New(errNotProvider)
+		if pkgProvider, ok = pkg.(*pkgmetav1alpha1.Provider); !ok {
+			return errors.New(errNotProvider)
+		}
 	}
 
 	provRev, ok := pr.(*v1.ProviderRevision)
@@ -108,9 +112,12 @@ func (h *ProviderHooks) Pre(ctx context.Context, pkg runtime.Object, pr v1.Packa
 // Post creates a packaged provider controller and service account if the
 // revision is active.
 func (h *ProviderHooks) Post(ctx context.Context, pkg runtime.Object, pr v1.PackageRevision) error {
-	pkgProvider, ok := pkg.(*pkgmeta.Provider)
+	var pkgProvider pkgmeta.Pkg
+	pkgProvider, ok := pkg.(*pkgmetav1beta1.Provider)
 	if !ok {
-		return errors.New("not a provider package")
+		if pkgProvider, ok = pkg.(*pkgmetav1alpha1.Provider); !ok {
+			return errors.New(errNotProvider)
+		}
 	}
 	if pr.GetDesiredState() != v1.PackageRevisionActive {
 		return nil
@@ -161,9 +168,10 @@ func NewConfigurationHooks() *ConfigurationHooks {
 
 // Pre sets status fields based on the configuration package.
 func (h *ConfigurationHooks) Pre(ctx context.Context, pkg runtime.Object, pr v1.PackageRevision) error {
-	_, ok := pkg.(*pkgmeta.Configuration)
-	if !ok {
-		return errors.New(errNotConfiguration)
+	if _, ok := pkg.(*pkgmetav1beta1.Configuration); !ok {
+		if _, ok := pkg.(*pkgmetav1alpha1.Configuration); !ok {
+			return errors.New(errNotConfiguration)
+		}
 	}
 
 	// TODO(hasheddan): update any status fields relevant to package revisions

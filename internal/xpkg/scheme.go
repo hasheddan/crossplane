@@ -23,6 +23,7 @@ import (
 
 	v1 "github.com/crossplane/crossplane/apis/apiextensions/v1"
 	v1beta1 "github.com/crossplane/crossplane/apis/apiextensions/v1beta1"
+	pkgmeta "github.com/crossplane/crossplane/apis/pkg/meta"
 	pkgmetav1alpha1 "github.com/crossplane/crossplane/apis/pkg/meta/v1alpha1"
 	pkgmetav1beta1 "github.com/crossplane/crossplane/apis/pkg/meta/v1beta1"
 )
@@ -31,12 +32,10 @@ import (
 // Crossplane package.
 func BuildMetaScheme() (*runtime.Scheme, error) {
 	metaScheme := runtime.NewScheme()
-	if err := pkgmetav1alpha1.SchemeBuilder.AddToScheme(metaScheme); err != nil {
-		return nil, err
-	}
-	if err := pkgmetav1beta1.SchemeBuilder.AddToScheme(metaScheme); err != nil {
-		return nil, err
-	}
+	metaScheme.AddUnversionedTypes(pkgmetav1alpha1.ConfigurationGroupVersionKind.GroupVersion(), &pkgmeta.Configuration{})
+	metaScheme.AddUnversionedTypes(pkgmetav1alpha1.ProviderGroupVersionKind.GroupVersion(), &pkgmeta.Provider{})
+	metaScheme.AddUnversionedTypes(pkgmetav1beta1.ConfigurationGroupVersionKind.GroupVersion(), &pkgmeta.Configuration{})
+	metaScheme.AddUnversionedTypes(pkgmetav1beta1.ProviderGroupVersionKind.GroupVersion(), &pkgmeta.Provider{})
 	return metaScheme, nil
 }
 
