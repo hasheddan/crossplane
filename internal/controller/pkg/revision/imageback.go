@@ -90,7 +90,7 @@ func (i *ImageBackend) Init(ctx context.Context, bo ...parser.BackendOption) (io
 		}
 	} else {
 		// Ensure source is a valid image reference.
-		ref, err := name.ParseReference(i.pr.GetSource(), name.WithDefaultRegistry(i.registry))
+		ref, err := name.ParseReference(i.pr.GetSource(), name.WithDefaultRegistry(i.registry), name.Insecure)
 		if err != nil {
 			return nil, errors.Wrap(err, errBadReference)
 		}

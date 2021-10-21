@@ -74,7 +74,7 @@ func (r *PackageRevisioner) Revision(ctx context.Context, p v1.Package) (string,
 			return p.GetCurrentRevision(), nil
 		}
 	}
-	ref, err := name.ParseReference(p.GetSource(), name.WithDefaultRegistry(r.registry))
+	ref, err := name.ParseReference(p.GetSource(), name.WithDefaultRegistry(r.registry), name.Insecure)
 	if err != nil {
 		return "", err
 	}

@@ -107,7 +107,7 @@ func (m *PackageDependencyManager) Resolve(ctx context.Context, pkg runtime.Obje
 		return found, installed, invalid, errors.Wrap(err, errGetOrCreateLock)
 	}
 
-	prRef, err := name.ParseReference(pr.GetSource(), name.WithDefaultRegistry(""))
+	prRef, err := name.ParseReference(pr.GetSource(), name.WithDefaultRegistry(""), name.Insecure)
 	if err != nil {
 		return found, installed, invalid, err
 	}
@@ -215,7 +215,7 @@ func (m *PackageDependencyManager) Resolve(ctx context.Context, pkg runtime.Obje
 
 // RemoveSelf removes a package from the lock.
 func (m *PackageDependencyManager) RemoveSelf(ctx context.Context, pr v1.PackageRevision) error {
-	prRef, err := name.ParseReference(pr.GetSource(), name.WithDefaultRegistry(""))
+	prRef, err := name.ParseReference(pr.GetSource(), name.WithDefaultRegistry(""), name.Insecure)
 	if err != nil {
 		return err
 	}

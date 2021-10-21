@@ -227,7 +227,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		log.Debug(errInvalidConstraint, "error", err)
 		return reconcile.Result{}, nil
 	}
-	ref, err := name.ParseReference(dep.Package)
+	ref, err := name.ParseReference(dep.Package, name.Insecure)
 	if err != nil {
 		log.Debug(errInvalidDependency, "error", err)
 		return reconcile.Result{}, nil
